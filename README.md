@@ -44,7 +44,7 @@ Make a change and pull it in a new branch.
 ### Todos
 
  - Return struct instead of printf in db_query
- - 
+
 License
 ----
 
