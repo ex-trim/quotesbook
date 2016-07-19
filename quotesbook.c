@@ -29,12 +29,17 @@
 #include <ctype.h>
 #include <sqlite3.h>
 #include <getopt.h>
+#include <pwd.h>
+#include <sys/stat.h>
 
 /* The official name of this program */
 #define PROGRAM_NAME "quotesbook"
 
 /* Buffer size for strings */
 #define BUF_SIZE 1024
+
+/* Path length */
+#define PATH_SIZE 150
 
 /* status and options codes */
 #define O_EOK 0   /* operation ends normal    */
@@ -53,7 +58,8 @@
 #define E_NOD 37  /* no data error            */
 
 /* database filename */
-const char DB_FILENAME[] = "quotes.db";
+char DB_FILENAME[PATH_SIZE] = {0};
+
 
 /*
 * TODO:
@@ -61,6 +67,43 @@ const char DB_FILENAME[] = "quotes.db";
 *   убрать вывод из query_db и возвращать только значение(массив)
 *       - тогда можно будет убрать опцию нумерации (посчитаем количество эл-тов массива)
 */
+
+
+/*
+* Initial environment variables
+*/
+int p_init()
+{
+  struct passwd *pw = getpwuid(getuid());
+
+  const char *homedir = pw->pw_dir;
+
+  char confdir[PATH_SIZE] = {0};
+  strcat(confdir, homedir);
+  strcat(confdir, "/.");
+  strcat(confdir, PROGRAM_NAME);
+
+  /* check application directory in user home */
+  struct stat st = {0};
+
+  if (stat(confdir, &st) == -1)
+  {
+    mkdir(confdir, 0700);
+  }
+
+  /* set quotes database file path */
+  strcat(DB_FILENAME, confdir);
+  strcat(DB_FILENAME, "/quotes.db");
+
+  /*
+  * if database not exist in user home (application) directory 
+  * but exist sample_quotes.db move last to application directory
+  */
+  if ((stat(DB_FILENAME, &st) == -1) && (stat("sample_quotes.db", &st) == 0))
+    rename("sample_quotes.db", DB_FILENAME);
+
+  return O_EOK;
+}
 
 
 /*
@@ -459,6 +502,10 @@ int main(int argc, char **argv)
 	int lflag = 0;
 	int aflag = 0;
   extern char *optarg;
+
+  /* initial application settings */
+  p_init();
+
   /* get options */
 	while ((opt = getopt( argc, argv, "ad:n:hl" )) != -1)
 	{
